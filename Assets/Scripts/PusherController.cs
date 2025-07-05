@@ -16,9 +16,14 @@ public class PusherController : MonoBehaviour
     [SerializeField] private Transform rightLeg;
     [SerializeField] private Transform grabPoint;
 
+    [Header("Handle Parts")]
+    [SerializeField] private Transform thumbRing; // Thumb ring
+    [SerializeField] private Transform fingerRing; // Finger ring (if you want to animate it too)
+
     [Header("Animation Settings")]
     [SerializeField] private float stemMoveDistance = 0.02f;
     [SerializeField] private float legOpenAngle = 15f;
+    [SerializeField] private float thumbRingMoveDistance = 0.03f; // Distance thumb ring moves towards finger ring
     [SerializeField] private float animationSpeed = 5f;
     [SerializeField][Range(0f, 1f)] private float holdingOpenAmount = 0.4f;
 
@@ -29,7 +34,7 @@ public class PusherController : MonoBehaviour
     private bool isClosing = true;
     private float currentOpenAmount = 0f;
     private HashSet<GameObject> grabbableObjectsInRange = new HashSet<GameObject>();
-    private Vector3 stemStartPos, pusherStartPos;
+    private Vector3 stemStartPos, pusherStartPos, thumbRingStartPos;
     private Quaternion leftLegStartRot, rightLegStartRot;
 
     void Start()
@@ -38,6 +43,16 @@ public class PusherController : MonoBehaviour
         if (pusher != null) pusherStartPos = pusher.localPosition;
         if (leftLeg != null) leftLegStartRot = leftLeg.localRotation;
         if (rightLeg != null) rightLegStartRot = rightLeg.localRotation;
+
+        if (thumbRing != null)
+        {
+            thumbRingStartPos = thumbRing.localPosition;
+            Debug.Log($"Thumb Ring Start Position: {thumbRingStartPos}");
+        }
+        else
+        {
+            Debug.LogWarning("Thumb Ring Transform is not assigned!");
+        }
 
         if (selectAction != null)
         {
@@ -122,12 +137,14 @@ public class PusherController : MonoBehaviour
     {
         isClosing = false;
         ReleaseBall();
+        Debug.Log("Forceps opening - thumb ring should move towards finger ring");
     }
 
     private void OnSelectReleased(InputAction.CallbackContext context)
     {
         isClosing = true;
         TryGrab();
+        Debug.Log("Forceps closing - thumb ring should return to original position");
     }
 
     private void OnTriggerPressed(InputAction.CallbackContext context)
@@ -145,6 +162,31 @@ public class PusherController : MonoBehaviour
         if (pusher != null) pusher.localPosition = pusherStartPos + Vector3.forward * stemMoveDistance * 0.8f * currentOpenAmount;
         if (leftLeg != null) leftLeg.localRotation = leftLegStartRot * Quaternion.Euler(0, 0, legOpenAngle * currentOpenAmount);
         if (rightLeg != null) rightLeg.localRotation = rightLegStartRot * Quaternion.Euler(0, 0, -legOpenAngle * currentOpenAmount);
+
+        // Animate thumb ring - moves towards finger ring when forceps open
+        if (thumbRing != null)
+        {
+            // When forceps opens (currentOpenAmount increases), thumb ring moves towards finger ring
+            // This typically means moving "down" or "forward" depending on your model orientation
+            // Try different directions based on your forceps model:
+
+            // Option 1: Move down (most common for forceps)
+            //Vector3 newPosition = thumbRingStartPos + Vector3.down * thumbRingMoveDistance * currentOpenAmount;
+
+            // Option 2: Move forward (if rings are aligned front-to-back)
+            //Vector3 newPosition = thumbRingStartPos + Vector3.forward * thumbRingMoveDistance * currentOpenAmount;
+
+            // Option 3: Move backward (if rings are aligned front-to-back, opposite direction)
+            Vector3 newPosition = thumbRingStartPos + Vector3.down * thumbRingMoveDistance * currentOpenAmount;
+
+            thumbRing.localPosition = newPosition;
+
+            // Debug log to see if animation is working
+            if (currentOpenAmount > 0.1f)
+            {
+                Debug.Log($"Thumb Ring Position: {thumbRing.localPosition}, OpenAmount: {currentOpenAmount}");
+            }
+        }
     }
 
     void OnDestroy()
